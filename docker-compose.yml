@@ -1,0 +1,43 @@
+services:
+  backend:
+    image: python:3.12-slim
+    container_name: visual-recommendation-backend
+    working_dir: /app/backend
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+    depends_on:
+      - qdrant
+    command: sh -c "pip install --no-cache-dir fastapi uvicorn qdrant-client sentence-transformers torch Pillow && uvicorn main:app --host 0.0.0.0 --port 8000"
+    restart: unless-stopped
+
+  frontend:
+    image: python:3.12-slim
+    container_name: visual-recommendation-frontend
+    working_dir: /app/frontend
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+    command: sh -c "pip install --no-cache-dir streamlit requests Pillow && streamlit run app.py --server.port 8501 --server.address 0.0.0.0"
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.0
+    container_name: visual-recommendation-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
